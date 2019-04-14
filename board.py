@@ -27,27 +27,83 @@ def recieveSignal(serial):
     print(colored("RECIEVED: ", 'blue'), msg)
     return msg
 
+'''
+    DATA PROCESSING
+'''
+def jst_normalize(data):
+    # jst min: 2^5 128 max: 2^15 32758
+    val = 0 if abs(data) < 150 else int((255/32736)*data)
+    return val
+
 """
     EVENT HANDELING
 """
+# Digital Signal
 def press_X(ser, ev_type, state):
     signal = 'X,0' if state == 0 else 'X,1'
     sendSignal(ser, signal)
 
 def press_A(ser, ev_type, state):
-    signal = 'A,0' if state == 0 else 'A,1'
+    signal = 'A,' + str(state)
     sendSignal(ser, signal)
 
 def press_B(ser, ev_type, state):
-    signal = 'B,0' if state == 0 else 'B,1'
+    signal = 'B,' + str(state)
     sendSignal(ser, signal)
 
 def press_Y(ser, ev_type, state):
-    signal = 'Y,0' if state == 0 else 'Y,1'
+    signal = 'Y,' + str(state)
     sendSignal(ser, signal)
 
 def press_RB(ser, ev_type, state):
-    signal = 'RB,0' if state == 0 else 'RB,1'
+    signal = 'RB,' + str(state)
+    sendSignal(ser, signal)
+
+def press_LB(ser, ev_type, state):
+    signal = 'LB,' + str(state)
+    sendSignal(ser, signal)
+
+def press_DPX(ser, ev_type, state):
+    # D-pad X axis
+    signal = 'DPX,' + str(state)
+    sendSignal(ser, signal)
+
+def press_DPY(ser, ev_type, state):
+    # D-pad Y axis
+    signal = 'DPY,' + str(state)
+    sendSignal(ser, signal)
+
+# Analog Signal
+def press_RT(ser, en_type, state):
+    signal = 'RT,' + str(state)
+    sendSignal(ser, signal)
+
+def press_LT(ser, en_type, state):
+    signal = 'LT,' + str(state)
+    sendSignal(ser, signal)
+
+def press_LAX(ser, en_type, state):
+    # left analog stick x
+    state = jst_normalize(state)
+    signal = 'LAX,' + str(state)
+    sendSignal(ser, signal)
+
+def press_LAY(ser, en_type, state):
+    # left analog stick y
+    state = jst_normalize(state)
+    signal = 'LAY,' + str(state)
+    sendSignal(ser, signal)
+
+def press_RAX(ser, en_type, state):
+    # right analog stick x
+    state = jst_normalize(state)
+    signal = 'RAX,' + str(state)
+    sendSignal(ser, signal)
+
+def press_RAY(ser, en_type, state):
+    # right analog stick y
+    state = jst_normalize(state)
+    signal = 'RAY,' + str(state)
     sendSignal(ser, signal)
 
 event_dict = {'BTN_NORTH' : press_X,
@@ -55,11 +111,20 @@ event_dict = {'BTN_NORTH' : press_X,
               'BTN_EAST'  : press_B, 
               'BTN_WEST'  : press_Y, 
               'BTN_TR'    : press_RB, 
+              'BTN_TL'    : press_LB, 
+              'ABS_RZ'    : press_RT, 
+              'ABS_Z'     : press_LT, 
+              'ABS_HAT0X' : press_DPX, 
+              'ABS_HAT0Y' : press_DPY, 
+              'ABS_X'     : press_LAX, 
+              'ABS_Y'     : press_LAY, 
+              'ABS_RX'    : press_RAX, 
+              'ABS_RY'    : press_RAY, 
             }
 
 def event_loop(ser, events):
     for event in events:
-        print(event.ev_type, event.code, event.state)
+        #print(event.ev_type, event.code, event.state)
                 
         call = event_dict.get(event.code)
         if callable(call):

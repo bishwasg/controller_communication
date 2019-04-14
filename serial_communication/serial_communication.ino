@@ -1,5 +1,7 @@
 const byte numChars = 32; // max number of character
 char receivedChars[numChars]; // holder for incomming data
+char signalType[numChars] = {0};
+int signalVal = 0;
 boolean newData = false; // boolean to keep track if new data has been read
 
 
@@ -55,28 +57,45 @@ void response() {
     // -----------------
 
     // Printing recieved data
-    Serial.println(receivedChars);
+    // Serial.println(receivedChars);
 
-    
-    if(strcmp(receivedChars, "X,1") == 0){
-        analogWrite(blue_PIN, 225);
-        delay(10);
-        }
-        
-    if(strcmp(receivedChars, "A,1") == 0){
-        analogWrite(green_PIN, 225);
-        delay(10); 
-      }
+    // Start parsing data into controlType and controlVal
+    char * strtokIndx; // this is used by strtok() as an index
+  
+    strtokIndx = strtok(receivedChars,",");      // get the first part - the string
+    strcpy(signalType, strtokIndx); // copy it to messageFromPC
+  
+    strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+    signalVal = atoi(strtokIndx);     // convert this part to an integer
 
-    if(strcmp(receivedChars, "red") == 0){
-        analogWrite(red_PIN, 225);
-        delay(10); 
-      }
+    // printing parsed data
+    Serial.print(signalType);
+    Serial.print(',');
+    Serial.println(signalVal);
+
+    // Doing stuff
+      analogSignal("LAX", blue_PIN, signalType, signalVal);
+
+      analogSignal("LAY", green_PIN, signalType, signalVal);
       
-     if(strcmp(receivedChars, "yellow") == 0){
-        analogWrite(yellow_PIN, 225);
-        delay(10); 
-      }
+      analogSignal("RAX", red_PIN, signalType, signalVal);
+
+      analogSignal("RAY", yellow_PIN, signalType, signalVal);
+      
+//    if(strcmp(receivedChars, "A,1") == 0){
+//        analogWrite(green_PIN, 225);
+//        delay(10); 
+//      }
+//
+//    if(strcmp(receivedChars, "red") == 0){
+//        analogWrite(red_PIN, 225);
+//        delay(10); 
+//      }
+//      
+//     if(strcmp(receivedChars, "yellow") == 0){
+//        analogWrite(yellow_PIN, 225);
+//        delay(10); 
+//      }
       
      if(strcmp(receivedChars, "clear") == 0){
         digitalWrite(blue_PIN, LOW);
@@ -87,14 +106,39 @@ void response() {
       }
 
     // -----------------
-    // End of cycle
+    // End of cycle & start new
     newData = false;
-    }
+    }  
+    //showNewData();
+  }
 
-    
-    
-//    showNewData();
-}
+void digitalSignal(char *btn, int pin, char *typ, int val){
+  // digital signal
+  
+  if(strcmp(typ, btn) == 0){
+    if(val == 0){
+      digitalWrite(pin, LOW);
+      delay(10);
+      }else{
+        digitalWrite(pin, HIGH);
+        }
+      }
+  }
+
+
+void analogSignal(char *btn, int pin, char *typ, int val){
+  // digital signal
+  
+  if(strcmp(typ, btn) == 0){
+    if(val == 0){
+      digitalWrite(pin, LOW);
+      delay(10);
+      }else{
+        analogWrite(pin, val);
+        }
+      }
+  }
+
 //| ---------------------------  |//
 //| SENDING AND RECIEVING SIGNAL |
 //| ---------------------------  |//
