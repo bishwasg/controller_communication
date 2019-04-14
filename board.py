@@ -31,23 +31,23 @@ def recieveSignal(serial):
     EVENT HANDELING
 """
 def press_X(ser, ev_type, state):
-    signal = 'X-0' if state == 0 else 'X-1'
+    signal = 'X,0' if state == 0 else 'X,1'
     sendSignal(ser, signal)
 
 def press_A(ser, ev_type, state):
-    signal = 'A-0' if state == 0 else 'A-1'
+    signal = 'A,0' if state == 0 else 'A,1'
     sendSignal(ser, signal)
 
 def press_B(ser, ev_type, state):
-    signal = 'B-0' if state == 0 else 'B-1'
+    signal = 'B,0' if state == 0 else 'B,1'
     sendSignal(ser, signal)
 
 def press_Y(ser, ev_type, state):
-    signal = 'Y-0' if state == 0 else 'Y-1'
+    signal = 'Y,0' if state == 0 else 'Y,1'
     sendSignal(ser, signal)
 
 def press_RB(ser, ev_type, state):
-    signal = 'RB-0' if state == 0 else 'RB-1'
+    signal = 'RB,0' if state == 0 else 'RB,1'
     sendSignal(ser, signal)
 
 event_dict = {'BTN_NORTH' : press_X,
@@ -64,7 +64,7 @@ def event_loop(ser, events):
         call = event_dict.get(event.code)
         if callable(call):
             call(ser, event.ev_type, event.state)
-
+            recieveSignal(ser)
 """
 -------------
     MAIN
@@ -100,6 +100,8 @@ def main():
     else:
         pad = pads[0]
     
+    #sendSignal(ser, "howdy")
+    #recieveSignal(ser) 
     try:
         while True:
             try:
@@ -110,12 +112,12 @@ def main():
         print("BYEEE!")
 
    # # ---------------
-   # for i in range(4):
+    #for i in range(4):
 
-   #     sendSignal(ser, 'red')
-   #     recieveSignal(ser)
+    #    sendSignal(ser, 'X-1')
+    #    recieveSignal(ser)
 
-   #     sleep(2)
+    #    sleep(2)
 
 if __name__ == "__main__":
     main()

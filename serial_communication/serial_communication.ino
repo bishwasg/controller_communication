@@ -49,16 +49,21 @@ void loop() {
 
 void response() {
   // NOTE: only response if new data is true
+
   if(newData == true) {
     // NEW DATA RECIEVED
     // -----------------
+
+    // Printing recieved data
+    Serial.println(receivedChars);
+
     
-    if(strcmp(receivedChars, "blue") == 0){
+    if(strcmp(receivedChars, "X,1") == 0){
         analogWrite(blue_PIN, 225);
         delay(10);
         }
         
-    if(strcmp(receivedChars, "green") == 0){
+    if(strcmp(receivedChars, "A,1") == 0){
         analogWrite(green_PIN, 225);
         delay(10); 
       }
@@ -82,9 +87,13 @@ void response() {
       }
 
     // -----------------
+    // End of cycle
+    newData = false;
     }
 
-    showNewData();
+    
+    
+//    showNewData();
 }
 //| ---------------------------  |//
 //| SENDING AND RECIEVING SIGNAL |
