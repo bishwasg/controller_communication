@@ -30,20 +30,45 @@ const int base_ena_PIN = 11;
 const int base_alm_PIN = 13;
 
 // drive
-const int left_pwm_PIN  = 6;
-const int right_pwm_PIN = 2;
+const int left_pwm_PIN  = 2;
+const int right_pwm_PIN = 6;
 
-const int left_dir_PIN  = 8;
-const int right_dir_PIN = 4;
+const int left_dir_PIN  = 4;
+const int right_dir_PIN = 8;
 
 const int left_analog_PIN  = A2;
 const int right_analog_PIN = A4;
 
+//Mist
+const int battery_analog_PIN = A0;
+int left_analog_0 = 0;
+int right_analog_0 = 0;
+
+int left_analog_1 = 0;
+int right_analog_1 = 0;
+
+int left_error = 0;
+int right_error = 0;
+
+int steer_val_input = 0;
+int steer_control_left = 0;
+int steer_control_right = 0;
 
 //| --- |//
 //| END |
 //| --- |//
 
+
+// Responsive analog read
+
+ResponsiveAnalogRead boomAnalog(boom_analog_PIN, true);
+ResponsiveAnalogRead dipperAnalog(dipper_analog_PIN, true);
+
+
+ResponsiveAnalogRead leftAnalog(left_analog_PIN, true);
+ResponsiveAnalogRead rightAnalog(right_analog_PIN, true);
+
+ResponsiveAnalogRead batteryAnalog(right_analog_PIN, true);
 
 void setup() {
   // Declare PIN mode
@@ -100,9 +125,9 @@ void response() {
     signalVal = atoi(strtokIndx);     // convert this part to an integer
 
     // printing parsed data
-    Serial.print(signalType);
-    Serial.print(',');
-    Serial.println(signalVal);
+//    Serial.print(signalType);
+//    Serial.print(',');
+//    Serial.println(signalVal);
 
 
     // BOOM
@@ -130,7 +155,7 @@ void response() {
 
 
     // BASE
-    // - cw
+    // - ccw
     if(strcmp(signalType, "LB") == 0){
       digitalWrite(base_dir_PIN, HIGH);
       if(signalVal == 1){
@@ -139,7 +164,7 @@ void response() {
           digitalWrite(base_pwm_PIN, LOW);
         }  
       }
-    // -ccw
+    // -cw
     if(strcmp(signalType, "RB") == 0){
       digitalWrite(base_dir_PIN, LOW);
       if(signalVal == 1){
@@ -148,27 +173,111 @@ void response() {
           digitalWrite(base_pwm_PIN, LOW);
         }  
       }
-
-    // Steer
-    if(strcmp(signalType, "LAX") == 0){
-      if(signalVal < 0){
-          digitalWrite(left_dir_PIN, LOW);
-          digitalWrite(right_dir_PIN, LOW);
-          signalVal = -signalVal;
-        }else{
-          digitalWrite(left_dir_PIN, HIGH);
-          digitalWrite(right_dir_PIN, HIGH);
-        }  
         
-      analogWrite(left_pwm_PIN, signalVal);
-      analogWrite(right_pwm_PIN, signalVal);
+    if(strcmp(signalType, "LAX") == 0){
+      steer_val_input = signalVal;
+      
+
+//      Serial.print(left_analog_0);
+//      Serial.print('-');
+//      Serial.print(right_analog_0);
+
+//      Serial.print(left_analog_1);
+//      Serial.print('-');
+//      Serial.print(right_analog_1);
+
+
+      
+//      if(signalVal < 0){
+//          digitalWrite(left_dir_PIN, LOW);
+//          digitalWrite(right_dir_PIN, LOW);
+//          signalVal = -signalVal;
+//        }else{
+//          digitalWrite(left_dir_PIN, HIGH);
+//          digitalWrite(right_dir_PIN, HIGH);
+//        }  
+//        
+//      analogWrite(left_pwm_PIN, signalVal);
+//      analogWrite(right_pwm_PIN, signalVal);
+//      
+
+      
       }
+
+    // DRIVE
+    // - forward
+    if(strcmp(signalType, "RT") == 0){
+      if(signalVal < 10){
+          signalVal = 0;
+        }
+      if(signalVal > 100){
+        signalVal = 100;
+        } 
+        
+//      Serial.print("HOWDY!");
+      analogWrite(motor_pwm_PIN, signalVal);
+      }
+
 
     // -----------------
     // End of cycle & start new
     newData = false;
     }  
     //showNewData();
+
+    //----------------------------
+    
+    //| -------- |//
+    //| STEERING |
+    //| -------- |//
+    // update the left and right value
+    leftAnalog.update();
+    rightAnalog.update();
+
+    // reading
+    left_analog_0  = leftAnalog.getValue();
+    right_analog_0 = leftAnalog.getValue();
+
+    left_error   = left_analog_0  - steerVal(steer_val_input);
+    right_error  = right_analog_0 - steerVal(steer_val_input); 
+
+//    steer_control_left  = 1*abs(left_error);
+//    steer_control_right = 1*abs(right_error);
+//
+//    if(steer_control_left < 50)  steer_control_left = 80;
+//    if(steer_control_right < 50) steer_control_right = 80;
+//    
+//    if(steer_control_left > 255)  steer_control_left = 255;
+//    if(steer_control_right < 255) steer_control_right = 255;
+//    Serial.print(steer_control_left);
+//    Serial.print(" - ");
+//    Serial.println(steer_control_right);
+    
+    steer_control_left = 94;
+    steer_control_right = 94;
+    
+
+    if(abs(left_error) < 5) {
+      digitalWrite(left_pwm_PIN, LOW);
+      } else if(left_error < 0){
+      digitalWrite(left_dir_PIN, LOW);
+      analogWrite(left_pwm_PIN, steer_control_left);
+      } else {
+        digitalWrite(left_dir_PIN, HIGH);
+        analogWrite(left_pwm_PIN, steer_control_left);
+        }
+
+     if(abs(right_error) < 5) {
+      digitalWrite(right_pwm_PIN, LOW);
+      } else if(left_error < 0){
+      digitalWrite(right_dir_PIN, LOW);
+      analogWrite(right_pwm_PIN, steer_control_right);
+      } else {
+        digitalWrite(right_dir_PIN, HIGH);
+        analogWrite(right_pwm_PIN, steer_control_right);
+        }
+        
+    //----------------------------
   }
 
 void digitalSignal(int pin, char *typ, int val){
@@ -248,6 +357,21 @@ void showNewData() {
     newData = false;
     }
 }
+//| --- |//
+//| END |
+//| --- |//
+
+
+//| ---- |//
+//| MISC |
+//| ---- |//
+
+int steerVal(int data){
+    
+    int val = (430.0/510.0)*data + 505;
+//    Serial.println(val);
+    return val;
+  }
 
 //| --- |//
 //| END |

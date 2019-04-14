@@ -21,11 +21,12 @@ def sendSignal(serial, data):
     print(colored("SENT:\t ", 'red'), data)
     
 def recieveSignal(serial):
-    serial.flush() # wait for all the data is written
+    #serial.flush() # wait for all the data is written
     # Reading from arduino serial
-    msg = serial.readline()
-    print(colored("RECIEVED: ", 'blue'), msg)
-    return msg
+    while(serial.in_waiting):
+        msg = serial.readline()
+        print(colored("RECIEVED: ", 'blue'), msg)
+    #return msg
 
 '''
     DATA PROCESSING
@@ -123,13 +124,14 @@ event_dict = {'BTN_NORTH' : press_X,
             }
 
 def event_loop(ser, events):
+    recieveSignal(ser)
     for event in events:
         #print(event.ev_type, event.code, event.state)
                 
         call = event_dict.get(event.code)
         if callable(call):
             call(ser, event.ev_type, event.state)
-            recieveSignal(ser)
+            #recieveSignal(ser)
 """
 -------------
     MAIN
@@ -176,13 +178,6 @@ def main():
     except KeyboardInterrupt:
         print("BYEEE!")
 
-   # # ---------------
-    #for i in range(4):
-
-    #    sendSignal(ser, 'X-1')
-    #    recieveSignal(ser)
-
-    #    sleep(2)
 
 if __name__ == "__main__":
     main()
