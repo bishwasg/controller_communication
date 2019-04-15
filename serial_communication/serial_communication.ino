@@ -175,33 +175,7 @@ void response() {
       }
         
     if(strcmp(signalType, "LAX") == 0){
-      steer_val_input = signalVal;
-      
-
-//      Serial.print(left_analog_0);
-//      Serial.print('-');
-//      Serial.print(right_analog_0);
-
-//      Serial.print(left_analog_1);
-//      Serial.print('-');
-//      Serial.print(right_analog_1);
-
-
-      
-//      if(signalVal < 0){
-//          digitalWrite(left_dir_PIN, LOW);
-//          digitalWrite(right_dir_PIN, LOW);
-//          signalVal = -signalVal;
-//        }else{
-//          digitalWrite(left_dir_PIN, HIGH);
-//          digitalWrite(right_dir_PIN, HIGH);
-//        }  
-//        
-//      analogWrite(left_pwm_PIN, signalVal);
-//      analogWrite(right_pwm_PIN, signalVal);
-//      
-
-      
+      steer_val_input = signalVal; 
       }
 
     // DRIVE
@@ -236,47 +210,54 @@ void response() {
 
     // reading
     left_analog_0  = leftAnalog.getValue();
-    right_analog_0 = leftAnalog.getValue();
+    right_analog_0 = rightAnalog.getValue();
 
-    left_error   = left_analog_0  - steerVal(steer_val_input);
-    right_error  = right_analog_0 - steerVal(steer_val_input); 
+    // steering LEFT
 
-//    steer_control_left  = 1*abs(left_error);
-//    steer_control_right = 1*abs(right_error);
-//
-//    if(steer_control_left < 50)  steer_control_left = 80;
-//    if(steer_control_right < 50) steer_control_right = 80;
-//    
-//    if(steer_control_left > 255)  steer_control_left = 255;
-//    if(steer_control_right < 255) steer_control_right = 255;
-//    Serial.print(steer_control_left);
-//    Serial.print(" - ");
-//    Serial.println(steer_control_right);
+    left_error   = steerVal(-steer_val_input) - left_analog_0;
+    steer_control_left = 5*abs(left_error);
     
-    steer_control_left = 94;
-    steer_control_right = 94;
-    
+    if(steer_control_left < 30){steer_control_left = 0;}
+    if(steer_control_left > 255){steer_control_left = 255;}
 
-    if(abs(left_error) < 5) {
+    Serial.print("L: ");
+    Serial.print(left_error);
+    Serial.print("  Control: ");
+    Serial.println(steer_control_left);
+    
+     if(abs(left_error) < 10) {
       digitalWrite(left_pwm_PIN, LOW);
       } else if(left_error < 0){
-      digitalWrite(left_dir_PIN, LOW);
+      digitalWrite(left_dir_PIN, HIGH);
       analogWrite(left_pwm_PIN, steer_control_left);
       } else {
-        digitalWrite(left_dir_PIN, HIGH);
+        digitalWrite(left_dir_PIN, LOW);
         analogWrite(left_pwm_PIN, steer_control_left);
         }
 
-     if(abs(right_error) < 5) {
+    // steering RIGHT
+///*
+    right_error   =  right_analog_0 - steerVal(steer_val_input);
+    steer_control_right = 5*abs(right_error);
+    
+    if(steer_control_right < 30){steer_control_right = 0;}
+    if(steer_control_right > 255){steer_control_right = 255;}
+
+    Serial.print("R: ");
+    Serial.print(right_error);
+    Serial.print("  Control: ");
+    Serial.println(steer_control_right);
+    
+     if(abs(right_error) < 10) {
       digitalWrite(right_pwm_PIN, LOW);
-      } else if(left_error < 0){
-      digitalWrite(right_dir_PIN, LOW);
+      } else if(right_error < 0){
+      digitalWrite(right_dir_PIN, HIGH);
       analogWrite(right_pwm_PIN, steer_control_right);
       } else {
-        digitalWrite(right_dir_PIN, HIGH);
+        digitalWrite(right_dir_PIN, LOW);
         analogWrite(right_pwm_PIN, steer_control_right);
         }
-        
+//    */
     //----------------------------
   }
 
@@ -372,7 +353,7 @@ int steerVal(int data){
 //    Serial.println(val);
     return val;
   }
-
+  
 //| --- |//
 //| END |
 //| --- |//
