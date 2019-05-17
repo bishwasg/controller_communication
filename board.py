@@ -26,7 +26,8 @@ def recieveSignal(serial):
     while(serial.in_waiting):
         msg = serial.readline()
         print(colored("RECIEVED: ", 'blue'), msg)
-    #return msg
+        return msg
+    return 0
 
 '''
     DATA PROCESSING
@@ -124,7 +125,8 @@ event_dict = {'BTN_NORTH' : press_X,
             }
 
 def event_loop(ser, events):
-    recieveSignal(ser)
+    msg = recieveSignal(ser)
+    # print(msg)
     for event in events:
         #print(event.ev_type, event.code, event.state)
                 

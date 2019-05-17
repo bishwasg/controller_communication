@@ -1,6 +1,10 @@
 // include the ResponsiveAnalogRead library
 #include <ResponsiveAnalogRead.h>
 #include <Thread.h>
+#include <SCServo.h>
+
+// claw stuff
+SMSCL sm;
 
 const byte numChars = 32; // max number of character
 char receivedChars[numChars]; // holder for incomming data
@@ -34,21 +38,19 @@ const int base_ena_PIN = 11;
 const int base_alm_PIN = 13;
 
 // drive
-const int left_pwm_PIN  = 2;
-const int right_pwm_PIN = 6;
+const int left_pwm_PIN  = 6;
+const int right_pwm_PIN = 2;
 
-const int left_dir_PIN  = 4;
-const int right_dir_PIN = 8;
+const int left_dir_PIN  = 8;
+const int right_dir_PIN = 4;
 
 const int left_analog_PIN  = A2;
 const int right_analog_PIN = A4;
 
-const int left_center_VAL = 450;
+const int left_center_VAL = 500;
 const int right_center_VAL = 550;
 
-
-
-//Mist
+// mist
 const int battery_analog_PIN = A0;
 int left_analog_0 = 0;
 int right_analog_0 = 0;
@@ -63,9 +65,11 @@ int steer_val_input = 0;
 int steer_control_left = 0;
 int steer_control_right = 0;
 
+int claw_speed = 0;
 
 // Thread
 Thread steer_thread = Thread();
+Thread battery_thread = Thread();
 
 //| --- |//
 //| END |
@@ -77,11 +81,10 @@ Thread steer_thread = Thread();
 ResponsiveAnalogRead boomAnalog(boom_analog_PIN, true);
 ResponsiveAnalogRead dipperAnalog(dipper_analog_PIN, true);
 
-
 ResponsiveAnalogRead leftAnalog(left_analog_PIN, true);
 ResponsiveAnalogRead rightAnalog(right_analog_PIN, true);
 
-ResponsiveAnalogRead batteryAnalog(right_analog_PIN, true);
+ResponsiveAnalogRead batteryAnalog(battery_analog_PIN, true);
 
 void setup() {
   // Declare PIN mode
@@ -113,8 +116,37 @@ void setup() {
   // Attach thread with function
   steer_thread.onRun(steer);
   steer_thread.setInterval(250);
-  
+
+  battery_thread.onRun(check_battery);
+  battery_thread.setInterval(1000);
+
   Serial.begin(57600);
+
+  // setting up claw control
+  Serial2.begin(115200);
+  sm.pSerial = &Serial2;
+
+
+//  sm.WritePos(1,  2000, 0, 1000);
+//  sm.WritePos(2,  2000, 0, 1000);
+//  sm.WritePos(3,  2000, 0, 1000);
+//
+//  sm.WritePos(4,  2000, 0, 1000);
+//  sm.WritePos(5,  2000, 0, 1000);
+//  sm.WritePos(6,  2000, 0, 1000);
+
+  delay(2000);
+
+  // CENTER CLAW
+  // pwm mode for claw rotation
+  sm.wheelMode(1);
+  sm.wheelMode(2);
+  sm.wheelMode(3);
+
+  sm.wheelMode(4);
+  sm.wheelMode(5);
+  sm.wheelMode(6);
+
   Serial.println("<Arduino is ready>");
 }
 
@@ -124,8 +156,16 @@ void loop() {
 
   response();
   if(steer_thread.shouldRun()){steer_thread.run();}
+
+//  if(battery_thread.shouldRun()){battery_thread.run();}
 }
 
+void check_battery(){
+  batteryAnalog.update();
+  Serial.print("<BAT:");
+  Serial.print(batteryAnalog.getValue());
+  Serial.println(">");
+  }
 
 void response() {
   
@@ -156,10 +196,10 @@ void response() {
     // BOOM
     if(strcmp(signalType, "RAX") == 0){
       if(signalVal < 0){
-          digitalWrite(boom_dir_PIN, LOW);
+          digitalWrite(boom_dir_PIN, HIGH);
           signalVal = -signalVal;
         }else{
-          digitalWrite(boom_dir_PIN, HIGH);
+          digitalWrite(boom_dir_PIN, LOW);
           }
           
       analogWrite(boom_pwm_PIN, signalVal);
@@ -168,21 +208,21 @@ void response() {
     // DIPPER
     if(strcmp(signalType, "RAY") == 0){
       if(signalVal < 0){
-          digitalWrite(dipper_dir_PIN, LOW);
+          digitalWrite(dipper_dir_PIN, HIGH);
           signalVal = -signalVal;
         }else{
-          digitalWrite(dipper_dir_PIN, HIGH);
+          digitalWrite(dipper_dir_PIN, LOW);
         }  
       analogWrite(dipper_pwm_PIN, signalVal);
       }
 
 
-    // BASE
+    // ARM BASE
     // - ccw
     if(strcmp(signalType, "LB") == 0){
       digitalWrite(base_dir_PIN, HIGH);
       if(signalVal == 1){
-          analogWrite(base_pwm_PIN, 50);
+          analogWrite(base_pwm_PIN, 100);
         }else{
           digitalWrite(base_pwm_PIN, LOW);
         }  
@@ -201,18 +241,41 @@ void response() {
       steer_val_input = signalVal; 
       }
 
+    // HAND BASE
+    // - ccw
+    if(strcmp(signalType, "X") == 0){
+      if(signalVal == 1){
+          sm.WriteSpe(1, 500);
+        }else{
+          sm.WriteSpe(1, 0);
+        }  
+      }
+    // -cw
+    if(strcmp(signalType, "B") == 0){
+      if(signalVal == 1){
+          sm.WriteSpe(1, -500);
+        }else{
+          sm.WriteSpe(1, 0);
+        }  
+      }
+        
+    if(strcmp(signalType, "LAX") == 0){
+      steer_val_input = signalVal; 
+      }
+
     /* 
      *  DRIVE
      */
+     
     // - forward
     if(strcmp(signalType, "LAY") == 0){
-      signalVal = signalVal / 3;
+      signalVal = signalVal/3;
 
       if(signalVal < 0){
         //FORWARD
         if(digitalRead(5) == HIGH){
           digitalWrite(5, LOW);
-          delay(1000);
+          delay(3000);
           }
           digitalWrite(29, HIGH);
           signalVal = -signalVal;
@@ -220,49 +283,83 @@ void response() {
         //BACKWARD
         if(digitalRead(29) == HIGH){
           digitalWrite(29, LOW);
-          delay(1000);
+          delay(3000);
           }
           digitalWrite(5, HIGH);
         }
-      
+
+      // Lower cap
       if(signalVal < 30){
           signalVal = 0;
           digitalWrite(29, LOW);
           digitalWrite(5, LOW);
-        } else {
-          signalVal -= 20;
         }
-      if(signalVal > 80){
-        signalVal = 80;
+
+      // Upper cap
+      if(signalVal > 150){
+        signalVal = 150;
         }
-        
+
+      Serial.println(signalVal);
+
       analogWrite(motor_pwm_PIN, signalVal);
+
       }
 
-//    // - backward
-//    if(strcmp(signalType, "LT") == 0){
-//      signalVal = signalVal / 3;
-//
-//      //FORWARD
-//      if(digitalRead(29) == HIGH){
-//        digitalWrite(29, LOW);
-//        delay(1000);
-//        }
-//        
-//      digitalWrite(5, HIGH);
-//      
-//      
-//      if(signalVal < 30){
-//          signalVal = 0;
-//        } else {
-//          signalVal -= 20;
-//        }
-//      if(signalVal > 80){
-//        signalVal = 80;
-//        }
-//        
-//      analogWrite(motor_pwm_PIN, signalVal);
-//      }
+    // close finger
+    if(strcmp(signalType, "RT") == 0){
+      if(signalVal < 50){
+        sm.WriteSpe(6,  0);
+        sm.WriteSpe(5,  0);
+        sm.WriteSpe(4,  0);
+        } else {
+        claw_speed = claw_speedVal(signalVal);
+        sm.WriteSpe(6, claw_speed);
+        sm.WriteSpe(5, claw_speed);
+        sm.WriteSpe(4, -claw_speed);
+        }
+      }
+
+     // open finger
+     if(strcmp(signalType, "LT") == 0){
+      if(signalVal < 100){
+        sm.WriteSpe(6,  0);
+        sm.WriteSpe(5,  0);
+        sm.WriteSpe(4,  0);
+        } else {
+        claw_speed = claw_speedVal(signalVal);
+        sm.WriteSpe(6, -claw_speed);
+        sm.WriteSpe(5, -claw_speed);
+        sm.WriteSpe(4, claw_speed);
+        }
+      }
+
+     if(strcmp(signalType, "DPX") == 0){
+        if(signalVal == -1){
+          sm.WriteSpe(2, -500);
+        }else if(signalVal == 1){
+          sm.WriteSpe(2, 500);
+        }else{
+          sm.WriteSpe(2, 0);
+        }
+      }
+
+     if(strcmp(signalType, "DPY") == 0){
+        if(signalVal == -1){
+          sm.WriteSpe(3, -500);
+        }else if(signalVal == 1){
+          sm.WriteSpe(3, 500);
+        }else{
+          sm.WriteSpe(3, 0);
+        }
+      }
+
+    if(strcmp(signalType, "Y") == 0){
+      if(signalVal == 1){
+          check_battery();
+        }  
+      }
+
       
     // -----------------
     // End of cycle & start new
@@ -293,10 +390,10 @@ void steer(){
     if(steer_control_left < 30){steer_control_left = 0;}
     if(steer_control_left > 255){steer_control_left = 255;}
 
-//    Serial.print("L: ");
-//    Serial.print(left_error);
-//    Serial.print("  Control: ");
-//    Serial.println(steer_control_left);
+    Serial.print("L: ");
+    Serial.print(left_error);
+    Serial.print("  Control: ");
+    Serial.println(steer_control_left);
     
      if(abs(left_error) < 10) {
       digitalWrite(left_pwm_PIN, LOW);
@@ -307,7 +404,7 @@ void steer(){
         digitalWrite(left_dir_PIN, LOW);
         analogWrite(left_pwm_PIN, steer_control_left);
         }
-
+    
     // steering RIGHT
     right_error   =  right_analog_0 - right_steerVal(steer_val_input);
     steer_control_right = 5*abs(right_error);
@@ -315,10 +412,10 @@ void steer(){
     if(steer_control_right < 30){steer_control_right = 0;}
     if(steer_control_right > 255){steer_control_right = 255;}
 
-    Serial.print("R: ");
-    Serial.print(right_error);
-    Serial.print("  Control: ");
-    Serial.println(steer_control_right);
+//    Serial.print("R: ");
+//    Serial.print(right_error);
+//    Serial.print("  Control: ");
+//    Serial.println(steer_control_right);
     
      if(abs(right_error) < 10) {
       digitalWrite(right_pwm_PIN, LOW);
@@ -430,6 +527,13 @@ int right_steerVal(int data){
     int val = (430.0/510.0)*data + right_center_VAL;
     return val;
   }
+
+
+int claw_speedVal(int data){
+    int val = (1500.0/225.0)*data;
+    return val;
+  }
+
   
 //| --- |//
 //| END |
