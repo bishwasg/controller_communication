@@ -1,4 +1,5 @@
 from time import sleep
+import datetime
 from serial import Serial
 import serial
 from termcolor import colored
@@ -37,6 +38,11 @@ def jst_normalize(data):
     val = 0 if abs(data) < 150 else int((255/32736)*data)
     return val
 
+stick_store = {
+    
+}
+
+
 """
     EVENT HANDELING
 """
@@ -68,6 +74,9 @@ def press_LB(ser, ev_type, state):
 def press_DPX(ser, ev_type, state):
     # D-pad X axis
     signal = 'DPX,' + str(state)
+    tdate = {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") : signal}
+    stick_store.update(tdate)
+    print(tdate)
     sendSignal(ser, signal)
 
 def press_DPY(ser, ev_type, state):
@@ -88,6 +97,9 @@ def press_LAX(ser, en_type, state):
     # left analog stick x
     state = jst_normalize(state)
     signal = 'LAX,' + str(state)
+    tdate = {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") : signal}
+    stick_store.update(tdate)
+    print(tdate)
     sendSignal(ser, signal)
 
 def press_LAY(ser, en_type, state):
@@ -175,11 +187,15 @@ def main():
         while True:
             try:
                 event_loop(ser, inputs.get_gamepad())
+
             except inputs.UnknownEventCode:
                 pass
     except KeyboardInterrupt:
-        print("BYEEE!")
-
+        import csv
+        with open('inputs.csv', 'w') as f:
+            for key in stick_store.keys():
+                f.write("%s,%s\n"%(key, stick_store[key]))
+        print("BYEEE")
 
 if __name__ == "__main__":
     main()

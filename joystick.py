@@ -26,12 +26,16 @@ event_dict = {
 
 # event loop 
 
+
 def event_loop(pad, events):
     for event in events:
         print(event.ev_type, event.code, event.state)
         call = event_dict.get(event.code)
         if callable(call):
-            call(pad, event.ev_type, event.state)
+            try:
+                call(pad, event.ev_type, event.state)
+            except:
+                print("Error");
 
 '''
 NOTE
@@ -52,6 +56,7 @@ if __name__ == '__main__':
         while True:
             try:
                 event_loop(pad, inputs.get_gamepad())
+                #pad.set_vibration(1, 1, 100);
             except inputs.UnknownEventCode:
                 pass
             
